@@ -69,24 +69,22 @@ Right above, we saw that BlockFactorizations supports `Diagonal` elements.
 Further, it also specializes matrix multiplication in case of a [block diagonal matrix](https://en.wikipedia.org/wiki/Block_matrix#Block_diagonal_matrices):
 ```julia
 d = 512
-n, m = 16, 8
+n = 16
 # testing Diagonal BlockFactorization
-A = [Diagonal(randn(d)) for i in 1:n, j in 1:m]
+A = Diagonal([(randn(d, d)) for i in 1:n])
+
 B = BlockFactorization(A)
 
-x = [randn(d) for _ in 1:m]
-y = [zeros(d) for _ in 1:n]
-@btime A*x
-  135.849 μs (321 allocations: 1.29 MiB)
-@btime mul!(y, A, x);
-  135.590 μs (320 allocations: 1.29 MiB)
+# this doesn't work in 1.6.2
+# x = [zeros(d) for _ in 1:n]
+# @btime A*x; 
 
-x = randn(d*m)
+x = randn(d*n)
 y = zeros(d*n)
 @btime B*x;
-  58.371 μs (157 allocations: 81.09 KiB)
+  1.005 ms (30 allocations: 67.45 KiB)
 @btime mul!(y, B, x);
-  50.194 μs (156 allocations: 17.05 KiB)
+  989.163 μs (28 allocations: 3.38 KiB)
 ```
 
 ## Notes

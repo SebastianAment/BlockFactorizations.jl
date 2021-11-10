@@ -136,7 +136,7 @@ function LinearAlgebra.mul!(Y::AbstractMatrix, B::BlockFactorization, X::Abstrac
 end
 
 # carries out multiplication for general BlockFactorization
-function blockmul!(y::AbstractVecOfVecOrMat, G::AbstractMatrix{<:AbstractMatOrFac},
+function blockmul!(y::AbstractVecOfVecOrMat, G::AbstractMatrix,
                    x::AbstractVecOfVecOrMat, α::Real = 1, β::Real = 0, strided::Val{false} = Val(false))
     @threads for i in eachindex(y)
         @. y[i] = β * y[i]
@@ -173,7 +173,7 @@ function LinearAlgebra.mul!(Y::AbstractMatrix, B::StridedBlockFactorization, X::
 end
 
 # recursively calls mul!, thereby avoiding memory allocation of block-matrix multiplication
-function blockmul!(y::AbstractVecOfVecOrMat, G::AbstractMatrix{<:AbstractMatOrFac},
+function blockmul!(y::AbstractVecOfVecOrMat, G::AbstractMatrix,
                    x::AbstractVecOfVecOrMat, strided::Val{true}, α::Real = 1, β::Real = 0)
     # pre-allocate temporary storage for matrix elements (needs to be done better, "similar"?)
     Gijs = [G[1, 1] for _ in 1:nthreads()] # IDEA could be nothing if G is a AbstractMatrix{<:Matrix}
@@ -191,17 +191,17 @@ end
 # fallback for generic matrices or factorizations
 # does not overwrite Gij in this case, only for more advanced data structures,
 # that are not already fully allocated
-function evaluate_block!(Gij, G::AbstractMatrix{<:AbstractMatOrFac}, i::Int, j::Int)
+function evaluate_block!(Gij, G::AbstractMatrix, i::Int, j::Int)
     G[i, j]
 end
 
 ################## specialization for diagonal block factorizations ############
 # const DiagonalBlockFactorization{T} = BlockFactorization{T, <:Diagonal}
 # carries out multiplication for Diagonal BlockFactorization
-function blockmul!(y::AbstractVecOfVecOrMat, G::Diagonal{<:AbstractMatOrFac},
-                   x::AbstractVecOfVecOrMat, α::Real = 1, β::Real = 0, strided::Val{false} = Val(false))
+function blockmul!(y::AbstractVecOfVecOrMat, G::Diagonal,
+                   x::AbstractVecOfVecOrMat, strided::Val{false}, α::Real = 1, β::Real = 0)
     @threads for i in eachindex(y)
-        @. y[i] = β * y[i] # TODO: y[i] .*= β ?
+        @. y[i] = β * y[i] # IDEA: y[i] .*= β ?
         Gii = G[i, i] # if it is not strided, we can't pre-allocate memory for blocks
         mul!(y[i], Gii, x[i], α, 1) # woodbury still allocates here because of Diagonal
     end
@@ -209,7 +209,7 @@ function blockmul!(y::AbstractVecOfVecOrMat, G::Diagonal{<:AbstractMatOrFac},
 end
 
 # recursively calls mul!, thereby avoiding memory allocation of block-matrix multiplication
-function blockmul!(y::AbstractVecOfVecOrMat, G::Diagonal{<:AbstractMatOrFac},
+function blockmul!(y::AbstractVecOfVecOrMat, G::Diagonal,
                    x::AbstractVecOfVecOrMat, strided::Val{true}, α::Real = 1, β::Real = 0)
     # pre-allocate temporary storage for matrix elements (needs to be done better, "similar"?)
     Giis = [G[1, 1] for _ in 1:nthreads()]
