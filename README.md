@@ -64,6 +64,32 @@ y = zeros(d*n)
 ```
 Note that as long as `mul!` and `size` is defined for the element types, `BlockFactorization` will be applicable.
 
+### Block Diagonal Matrix with Dense Blocks
+Right above, we saw that BlockFactorizations supports `Diagonal` elements.
+Further, it also specializes matrix multiplication in case of a [block diagonal matrix](https://en.wikipedia.org/wiki/Block_matrix#Block_diagonal_matrices):
+```julia
+d = 512
+n, m = 16, 8
+# testing Diagonal BlockFactorization
+A = [Diagonal(randn(d)) for i in 1:n, j in 1:m]
+B = BlockFactorization(A)
+
+x = [randn(d) for _ in 1:m]
+y = [zeros(d) for _ in 1:n]
+@btime A*x
+  135.849 μs (321 allocations: 1.29 MiB)
+@btime mul!(y, A, x);
+  135.590 μs (320 allocations: 1.29 MiB)
+
+x = randn(d*m)
+y = zeros(d*n)
+@btime B*x;
+  58.371 μs (157 allocations: 81.09 KiB)
+@btime mul!(y, B, x);
+  50.194 μs (156 allocations: 17.05 KiB)
+```
+
 ## Notes
 Note that the matrix multiplication function is parallelized with `@threads`.
 Also, a BlockFactorization `B` can be converted to a non-blocked matrix using `Matrix(B)`.
+Reported timings were computed on a 2017 MacBook Pro with a dual core processor and 16GB of RAM.
