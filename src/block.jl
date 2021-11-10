@@ -176,7 +176,7 @@ end
 function blockmul!(y::AbstractVecOfVecOrMat, G::AbstractMatrix{<:AbstractMatOrFac},
                    x::AbstractVecOfVecOrMat, strided::Val{true}, α::Real = 1, β::Real = 0)
     # pre-allocate temporary storage for matrix elements (needs to be done better, "similar"?)
-    Gijs = [G[1, 1] for _ in 1:nthreads()] # could be nothing if G is a AbstractMatrix{<:Matrix}
+    Gijs = [G[1, 1] for _ in 1:nthreads()] # IDEA could be nothing if G is a AbstractMatrix{<:Matrix}
     @threads for i in eachindex(y)
         @. y[i] = β * y[i]
         Gij = Gijs[threadid()]
