@@ -8,9 +8,23 @@ using Test
     dj = 3
     n = 5
     m = 7
-    # strided
+    # strided block matrix
     A = [randn(di, dj) for i in 1:n, j in 1:m]
+    # test general constructor
     F = BlockFactorization(A)
+    @test size(F) == (n*di, m*dj)
+    @test F.nindices isa AbstractRange # testing that stridedness was correctly identified
+    @test F.mindices isa AbstractRange
+    M = Matrix(F)
+    for ni in 2:2, mi in 1:1
+        for i in 1:di, j in 1:dj
+            @test F[di*(ni-1)+i, dj*(mi-1)+j] == A[ni, mi][i, j]
+            @test M[di*(ni-1)+i, dj*(mi-1)+j] == A[ni, mi][i, j]
+        end
+    end
+    # test strided constructor
+    isstrided = true
+    F = BlockFactorization(A, isstrided)
     M = Matrix(F)
     @test size(F) == (n*di, m*dj)
     for ni in 2:2, mi in 1:1

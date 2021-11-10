@@ -13,7 +13,7 @@ struct BlockFactorization{T, AT, U, V} <: Factorization{T}
     nindices::U
     mindices::V
     function BlockFactorization(A::AbstractMatrix, nindices, mindices)
-        T = eltype(eltype(A)) 
+        T = eltype(eltype(A))
         new{T, typeof(A), typeof(nindices), typeof(mindices)}(A, nindices, mindices)
     end
 end
@@ -22,11 +22,44 @@ const StridedBlockFactorization = BlockFactorization{<:Any, <:Any, <:StepRange, 
 function BlockFactorization(A::AbstractMatrix, di::Int, dj::Int = di)
     BlockFactorization(A, 1:di:di*size(A, 1)+1, 1:dj:dj*size(A, 2)+1)
 end
-# WARNING: this syntax assumes A has strided block indices
-function BlockFactorization(A::AbstractMatrix)
-    di, dj = size(A[1, 1])
-    BlockFactorization(A, di, dj) # this assumes it is strided
+# strided = true assumes that A has strided block indices, i.e. every element has the same size
+function BlockFactorization(A::AbstractMatrix, isstrided::Bool = false)
+    if isstrided
+        di, dj = size(A[1, 1])
+        nind, mind = 1:di:di*size(A, 1)+1, 1:dj:dj*size(A, 2)+1
+    else
+        n, m = size(A)
+        nind, mind = zeros(Int, n+1), zeros(Int, m+1)
+        nind[1], mind[1] = 1, 1
+        for i in 1:n
+            ni = size(A[i, 1], 1)
+            all(==(ni), (size(A[i, j], 1) for j in 1:m)) || throw(DimensionMismatch("elements in column $i do not all have the same size"))
+            nind[i+1] = nind[i] + ni
+        end
+        for j in 1:m
+            mj = size(A[1, j], 2)
+            all(==(mj), (size(A[i, j], 2) for i in 1:n)) || throw(DimensionMismatch("elements in row $j do not all have the same size"))
+            mind[j+1] = mind[j] + mj
+        end
+        nind, mind = strided(nind), strided(mind)
+    end
+    return BlockFactorization(A, nind, mind)
 end
+
+# if possible, convert x to a range, otherwise return x unchanged
+function strided(x::AbstractVector)
+    length(x) < 2 && return x
+    d = x[2] - x[1]
+    isstrided = true
+    for i in 2:length(x)-1
+        if !(x[i+1] - x[i] ≈ d)
+            isstrided = false
+            break
+        end
+    end
+    isstrided ? range(1, step = d, length = length(x)) : x
+end
+
 # allowing AT to be Matrix of Vectors would not work well with blockmul!
 # better to cast to Matrix of Matrices
 function BlockFactorization(A::AbstractMatrix{<:AbstractVector})
