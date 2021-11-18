@@ -127,20 +127,22 @@ end
 function LinearAlgebra.mul!(y::AbstractVector, B::BlockFactorization, x::AbstractVector, α::Real = 1, β::Real = 0)
     xx = [@view x[B.mindices[i] : B.mindices[i+1]-1] for i in 1:length(B.mindices)-1]
     yy = [@view y[B.nindices[i] : B.nindices[i+1]-1] for i in 1:length(B.nindices)-1]
-    blockmul!(yy, B.A, xx, α, β)
+    strided = Val(false)
+    blockmul!(yy, B.A, xx, strided, α, β)
     return y
 end
 
 function LinearAlgebra.mul!(Y::AbstractMatrix, B::BlockFactorization, X::AbstractMatrix, α::Real = 1, β::Real = 0)
     XX = [@view X[B.mindices[i] : B.mindices[i+1]-1, :] for i in 1:length(B.mindices)-1]
     YY = [@view Y[B.nindices[i] : B.nindices[i+1]-1, :] for i in 1:length(B.nindices)-1]
-    blockmul!(YY, B.A, XX, α, β)
+    strided = Val(false)
+    blockmul!(YY, B.A, XX, strided, α, β)
     return Y
 end
 
 # carries out multiplication for general BlockFactorization
 function blockmul!(y::AbstractVecOfVecOrMat, G::AbstractMatrix,
-                   x::AbstractVecOfVecOrMat, α::Real = 1, β::Real = 0, strided::Val{false} = Val(false))
+                   x::AbstractVecOfVecOrMat, strided::Val{false} = Val(false), α::Real = 1, β::Real = 0)
     @threads for i in eachindex(y)
         @. y[i] = β * y[i]
         for j in eachindex(x)
