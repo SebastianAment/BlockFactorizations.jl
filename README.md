@@ -1,4 +1,7 @@
 # BlockFactorizations.jl
+[![CI](https://github.com/SebastianAment/BlockFactorizations.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/SebastianAment/BlockFactorizations.jl/actions/workflows/CI.yml)
+[![codecov](https://codecov.io/gh/SebastianAment/BlockFactorizations.jl/branch/main/graph/badge.svg?token=27C8763R7S)](https://codecov.io/gh/SebastianAment/BlockFactorizations.jl)
+
 This package contains a data structure that wraps a matrix of matrices or factorizations and acts like the matrix resulting from concatenating the input matrices (see below).
 Notably, this allows the use of canonical linear algebra routines that just need to access `mul!` or `*` without special consideration for the block structure.
 The structure contained herein differentiates itself from [BlockArrays.jl](https://github.com/JuliaArrays/BlockArrays.jl) 
