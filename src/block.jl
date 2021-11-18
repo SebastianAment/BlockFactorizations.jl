@@ -1,5 +1,6 @@
 ################################################################################
 # assumes A is a matrix of matrices or factorizations each of which has size d by d
+# IDEA: add block matrix inverse, so far only interested in enabling efficient multiply for iterative methods
 """
 ```
 BlockFactorization{T} <: Factorization{T}
@@ -113,11 +114,13 @@ end
 
 ############################## matrix multiplication ###########################
 function Base.:*(B::BlockFactorization, x::AbstractVector)
-    y = zeros(eltype(x), size(B, 1))
+    T = promote_type(eltype(B), eltype(x))
+    y = zeros(T, size(B, 1))
     mul!(y, B, x)
 end
 function Base.:*(B::BlockFactorization, X::AbstractMatrix)
-    Y = zeros(eltype(X), size(B, 1), size(X, 2))
+    T = promote_type(eltype(B), eltype(X))
+    Y = zeros(T, size(B, 1), size(X, 2))
     mul!(Y, B, X)
 end
 
