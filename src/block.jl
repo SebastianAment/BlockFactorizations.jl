@@ -13,12 +13,24 @@ struct BlockFactorization{T, AT, U, V} <: Factorization{T}
     A::AT
     nindices::U
     mindices::V
-    function BlockFactorization(A::AbstractMatrix, nindices, mindices)
-        T = eltype(eltype(A))
-        new{T, typeof(A), typeof(nindices), typeof(mindices)}(A, nindices, mindices)
-    end
+end
+function BlockFactorization(A::AbstractMatrix, nindices, mindices)
+    T = block_eltype(A)
+    BlockFactorization{T, typeof(A), typeof(nindices), typeof(mindices)}(A, nindices, mindices)
 end
 const StridedBlockFactorization = BlockFactorization{<:Any, <:Any, <:StepRange, <:StepRange}
+
+# calculates the element type of the BlockFactorization with blocks given by A
+block_eltype(A::AbstractMatrix{<:Number}) = eltype(A)
+block_eltype(A::AbstractMatrix{<:AbstractMatrix}) = eltype(eltype(A))
+block_eltype(A::AbstractMatrix{<:Factorization}) = eltype(eltype(A))
+function block_eltype(A::AbstractMatrix)
+    T = Union{} # bottom type
+    for Ai in A
+        T = promote_type(T, eltype(Ai))
+    end
+    return T
+end
 
 function BlockFactorization(A::AbstractMatrix, di::Int, dj::Int = di)
     BlockFactorization(A, 1:di:di*size(A, 1)+1, 1:dj:dj*size(A, 2)+1)
