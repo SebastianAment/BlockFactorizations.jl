@@ -35,8 +35,9 @@ end
 function BlockFactorization(A::AbstractMatrix, di::Int, dj::Int = di)
     BlockFactorization(A, 1:di:di*size(A, 1)+1, 1:dj:dj*size(A, 2)+1)
 end
+
 # strided = true assumes that A has strided block indices, i.e. every element has the same size
-function BlockFactorization(A::AbstractMatrix, isstrided::Bool = false)
+function BlockFactorization(A::AbstractMatrix; isstrided::Bool = false)
     if isstrided
         di, dj = size(A[1, 1])
         nind, mind = 1:di:di*size(A, 1)+1, 1:dj:dj*size(A, 2)+1

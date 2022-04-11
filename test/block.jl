@@ -22,9 +22,8 @@ using Test
                 # test general constructor
                 di, dj = size(A[1])
                 n, m = size(A)
-                isstrided = true
                 strided_factorizations = [BlockFactorization(A),
-                                          BlockFactorization(A, isstrided),
+                                          BlockFactorization(A, isstrided = true),
                                           BlockFactorization(A, di, dj)]
                 # stride_matrices = [A, A, A, D, D, D] # matrices corresponding to strided_factorizations
                 for F in strided_factorizations
@@ -54,6 +53,9 @@ using Test
                     @test length(diagF) == minimum(size(M))
                     @test diagF ≈ diag(M)
                 end
+                allo_1 = @allocated BlockFactorization(A, isstrided = true)
+                allo_2 = @allocated BlockFactorization(A, isstrided = false)
+                @test allo_1 < allo_2
             end
 
             # general, non-strided block matrix
@@ -69,9 +71,8 @@ using Test
             matrices = [A, Diagonal(A)]
 
             for A in matrices
-                isstrided = false
                 factorizations = [BlockFactorization(A),
-                                  BlockFactorization(A, isstrided),
+                                  BlockFactorization(A, isstrided = false),
                                   BlockFactorization(A, nindices, mindices)
                                   ]
                 for F in factorizations
@@ -116,7 +117,7 @@ using Test
             A11 = Diagonal(randn(elty_A, n))
             A12 = randn(elty_A, n, n)
             A21 = UpperTriangular(randn(elty_A, n, n))
-            A22 = cholesky(A21'A21)
+            A22 = cholesky(Hermitian(A21'A21))
             A = reshape([A11, A12, A21, A22], 2, :)
             @test eltype(A) == Any
             B = BlockFactorization(A)
