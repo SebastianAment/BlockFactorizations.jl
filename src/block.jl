@@ -140,102 +140,35 @@ end
 function LinearAlgebra.mul!(y::AbstractVector, B::BlockFactorization, x::AbstractVector, α::Real = 1, β::Real = 0)
     xx = [@view x[B.mindices[i] : B.mindices[i+1]-1] for i in 1:length(B.mindices)-1]
     yy = [@view y[B.nindices[i] : B.nindices[i+1]-1] for i in 1:length(B.nindices)-1]
-    strided = Val(false)
-    blockmul!(yy, B.A, xx, strided, α, β)
+    blockmul!(yy, B.A, xx, α, β)
     return y
 end
 
 function LinearAlgebra.mul!(Y::AbstractMatrix, B::BlockFactorization, X::AbstractMatrix, α::Real = 1, β::Real = 0)
     XX = [@view X[B.mindices[i] : B.mindices[i+1]-1, :] for i in 1:length(B.mindices)-1]
     YY = [@view Y[B.nindices[i] : B.nindices[i+1]-1, :] for i in 1:length(B.nindices)-1]
-    strided = Val(false)
-    blockmul!(YY, B.A, XX, strided, α, β)
+    blockmul!(YY, B.A, XX, α, β)
     return Y
 end
 
 # carries out multiplication for general BlockFactorization
-function blockmul!(y::AbstractVecOfVecOrMat, G::AbstractMatrix,
-                   x::AbstractVecOfVecOrMat, strided::Val{false} = Val(false), α::Real = 1, β::Real = 0)
+function blockmul!(y::AbstractVecOfVecOrMat, G::AbstractMatrix, x::AbstractVecOfVecOrMat, α::Real = 1, β::Real = 0)
     @threads for i in eachindex(y)
         @. y[i] = β * y[i]
         for j in eachindex(x)
-            Gij = G[i, j] # if it is not strided, we can't pre-allocate memory for blocks
-            mul!(y[i], Gij, x[j], α, 1) # woodbury still allocates here because of Diagonal
+            mul!(y[i], G[i, j], x[j], α, 1)
         end
     end
     return y
-end
-
-# carries out block multiplication for strided block factorization
-function LinearAlgebra.mul!(y::AbstractVector, B::StridedBlockFactorization, x::AbstractVector, α::Real = 1, β::Real = 0)
-    length(x) == size(B, 2) || throw(DimensionMismatch("length(x) = $(length(x)) ≠ $(size(B, 2)) = size(B, 2)"))
-    length(y) == size(B, 1) || throw(DimensionMismatch("length(y) = $(length(y)) ≠ $(size(B, 1)) = size(B, 1)"))
-    X, Y = reshape(x, B.mindices.step, :), reshape(y, B.nindices.step, :)
-    xx, yy = [c for c in eachcol(X)], [c for c in eachcol(Y)]
-    strided = Val(true)
-    blockmul!(yy, B.A, xx, strided, α, β)
-    return y
-end
-
-function LinearAlgebra.mul!(Y::AbstractMatrix, B::StridedBlockFactorization, X::AbstractMatrix, α::Real = 1, β::Real = 0)
-    size(X, 1) == size(B, 2) || throw(DimensionMismatch("size(X, 1) = $(size(X, 1)) ≠ $(size(B, 2)) = size(B, 2)"))
-    size(Y, 1) == size(B, 1) || throw(DimensionMismatch("size(Y, 1) = $(size(Y, 1)) ≠ $(size(B, 1)) = size(B, 1)"))
-    k = size(Y, 2)
-    size(Y, 2) == size(X, 2) || throw(DimensionMismatch("size(Y, 2) = $(size(Y, 2)) ≠ $(size(X, 1)) = size(X, 1)"))
-    XR, YR = reshape(X, B.mindices.step, :, k), reshape(Y, B.nindices.step, :, k)
-    n, m = size(XR, 2), size(YR, 2)
-    XX, YY = @views [XR[:, i, :] for i in 1:n], [YR[:, i, :] for i in 1:m]
-    strided = Val(true)
-    blockmul!(YY, B.A, XX, strided, α, β)
-    return Y
-end
-
-# recursively calls mul!, thereby avoiding memory allocation of block-matrix multiplication
-function blockmul!(y::AbstractVecOfVecOrMat, G::AbstractMatrix,
-                   x::AbstractVecOfVecOrMat, strided::Val{true}, α::Real = 1, β::Real = 0)
-    # pre-allocate temporary storage for matrix elements (needs to be done better, "similar"?)
-    Gijs = [G[1, 1] for _ in 1:nthreads()] # IDEA could be nothing if G is a AbstractMatrix{<:Matrix}
-    @threads for i in eachindex(y)
-        @. y[i] = β * y[i]
-        Gij = Gijs[threadid()]
-        for j in eachindex(x)
-            Gij = evaluate_block!(Gij, G, i, j) # evaluating G[i, j] but can be more efficient if block has special structure (e.g. Woodbury)
-            mul!(y[i], Gij, x[j], α, 1) # woodbury still allocates here because of Diagonal
-        end
-    end
-    return y
-end
-
-# fallback for generic matrices or factorizations
-# does not overwrite Gij in this case, only for more advanced data structures,
-# that are not already fully allocated
-function evaluate_block!(Gij, G::AbstractMatrix, i::Int, j::Int)
-    G[i, j]
 end
 
 ################## specialization for diagonal block factorizations ############
 # const DiagonalBlockFactorization{T} = BlockFactorization{T, <:Diagonal}
 # carries out multiplication for Diagonal BlockFactorization
 function blockmul!(y::AbstractVecOfVecOrMat, G::Diagonal,
-                   x::AbstractVecOfVecOrMat, strided::Val{false}, α::Real = 1, β::Real = 0)
+                   x::AbstractVecOfVecOrMat, α::Real = 1, β::Real = 0)
     @threads for i in eachindex(y)
-        @. y[i] = β * y[i] # IDEA: y[i] .*= β ?
-        Gii = G[i, i] # if it is not strided, we can't pre-allocate memory for blocks
-        mul!(y[i], Gii, x[i], α, 1) # woodbury still allocates here because of Diagonal
-    end
-    return y
-end
-
-# recursively calls mul!, thereby avoiding memory allocation of block-matrix multiplication
-function blockmul!(y::AbstractVecOfVecOrMat, G::Diagonal,
-                   x::AbstractVecOfVecOrMat, strided::Val{true}, α::Real = 1, β::Real = 0)
-    # pre-allocate temporary storage for matrix elements (needs to be done better, "similar"?)
-    Giis = [G[1, 1] for _ in 1:nthreads()]
-    @threads for i in eachindex(y)
-        @. y[i] = β * y[i]
-        Gii = Giis[threadid()]
-        Gii = evaluate_block!(Gii, G, i, i) # evaluating G[i, j] but can be more efficient if block has special structure (e.g. Woodbury)
-        mul!(y[i], Gii, x[i], α, 1) # woodbury still allocates here because of Diagonal
+        mul!(y[i], G[i, i], x[i], α, β)
     end
     return y
 end
