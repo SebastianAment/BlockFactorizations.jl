@@ -19,6 +19,7 @@ function BlockFactorization(A::AbstractMatrix, nindices, mindices)
     BlockFactorization{T, typeof(A), typeof(nindices), typeof(mindices)}(A, nindices, mindices)
 end
 const StridedBlockFactorization = BlockFactorization{<:Any, <:Any, <:StepRange, <:StepRange}
+const BlockDiagonalFactorization = BlockFactorization{<:Any, <:Diagonal, <:Any, <:Any}
 
 # calculates the element type of the BlockFactorization with blocks given by A
 block_eltype(A::AbstractMatrix{<:Number}) = eltype(A)

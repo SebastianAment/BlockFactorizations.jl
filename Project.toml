@@ -1,7 +1,7 @@
 name = "BlockFactorizations"
 uuid = "5c499583-5bfe-4591-9b59-c1e192d48697"
 authors = ["Sebastian Ament <sebastianeament@gmail.com>"]
-version = "1.2.1"
+version = "1.2.2"
 
 [deps]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"

@@ -9,7 +9,7 @@ const AbstractMatOrFacOrUni{T} = Union{AbstractMatrix{T}, Factorization{T}, Unif
 const AbstractVecOfVec{T} = AbstractVector{<:AbstractVector{T}}
 const AbstractVecOfVecOrMat{T} = AbstractVector{<:AbstractVecOrMat{T}}
 
-export BlockFactorization
+export BlockFactorization, BlockDiagonalFactorization
 
 include("block.jl")
 

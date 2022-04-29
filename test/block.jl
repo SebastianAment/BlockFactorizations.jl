@@ -122,6 +122,11 @@ using Test
             @test eltype(A) == Any
             B = BlockFactorization(A)
             @test eltype(B) == elty_A
+
+            d, n = 2, 3
+            A = Diagonal([randn(elty_A, d, d) for _ in 1:n])
+            B = BlockFactorization(A)
+            @test B isa BlockDiagonalFactorization
         end
     end
 end
